@@ -1,9 +1,10 @@
 /* Prismfall service worker: precache the app shell, serve it offline, refresh in the background. */
-const VERSION = 'prismfall-v1';
+const VERSION = 'prismfall-v2-molded';
 const SHELL = [
   './',
   './index.html',
   './css/style.css',
+  './js/art.js',
   './js/core.js',
   './js/main.js',
   './manifest.webmanifest',
@@ -59,3 +60,4 @@ self.addEventListener('fetch', (event) => {
     )
   );
 });
+
