@@ -1,6 +1,6 @@
 # Prismfall
 
-A falling-shape puzzle where colors matter, not rows. The seven classic four-cell shapes drop into a 10×20 well, but each cell has its own color. Line up three or more blocks of one color in a row or column and they clear. Blocks above fall straight down, and every cascade step multiplies your points. Full rows do nothing.
+A falling-shape puzzle where colors matter, not rows. The seven classic four-cell shapes drop into a narrow 7×16 well, but each cell has its own color. Line up three or more blocks of one color in a row or column and they clear. Blocks above fall straight down, and every cascade step multiplies your points. Full rows do nothing.
 
 Prismfall is an installable, offline-first web app (PWA) tuned for iPhone 17 Pro Max (440×956 pt, 3×, Dynamic Island and home indicator safe areas). It also adapts to other phones, tablets and desktop browsers.
 
@@ -33,6 +33,8 @@ Prismfall is an installable, offline-first web app (PWA) tuned for iPhone 17 Pro
 - Swapping two specials together triggers a combo: crossfire (row and column), wide cross (three rows and three columns), a 5×5 mega blast, or color storms that turn every block of a color into blasters or bombs.
 
 **Scoring.** A run of 3 is worth 30 points, and longer runs grow faster than linearly. Several matches at once add 50% each, cascade step *n* multiplies by *n*, and everything is multiplied by your level. Special blocks, combos and hard drops add bonuses.
+
+**Feel.** Pieces ease in when they spawn, turn smoothly when rotated, and nudge against walls they can't pass. Landings squash slightly, hard drops thump the console and kick up dust, blocks bounce when they settle after a clear, swapped blocks lift over each other, and the hold box, next queue, score, level and swap pips pop when they change. All of it is skipped when the device asks for reduced motion.
 
 **Difficulty.** You level up every 45 blocks cleared. The fall speed rises each level, a sixth color joins at level 5, shapes arrive with more mixed colors, and the swap window gets shorter. If a new shape can't enter at the top, the game ends.
 

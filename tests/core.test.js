@@ -37,14 +37,20 @@ function boardRows(g) {
   return out;
 }
 
-test('new game spawns a piece at the top center', () => {
+test('new game spawns a centered piece at the top', () => {
   const g = new Game({ rng: seeded(1) });
   settle(g);
   assert.equal(g.phase, 'fall');
   const ys = g.piece.cells.map((c) => g.piece.y + c.y);
   assert.equal(Math.min(...ys), 0);
-  const xs = g.piece.cells.map((c) => g.piece.x + c.x);
-  assert.ok(Math.min(...xs) >= 3 && Math.max(...xs) <= 6);
+  // every shape is centered in the 7-wide well
+  for (const type of PF.TYPES) {
+    const p = g.makePiece({ type, colors: [0, 0, 0, 0] });
+    const xs = p.cells.map((c) => p.x + c.x);
+    const left = Math.min(...xs);
+    const right = COLS - 1 - Math.max(...xs);
+    assert.ok(Math.abs(left - right) <= 1, type + ' off center: ' + left + '/' + right);
+  }
   assert.equal(g.queue.length, 5);
 });
 
@@ -101,30 +107,30 @@ test('SRS wall kick lets a vertical I rotate against the wall', () => {
 
 test('a horizontal run of three clears and blocks above fall', () => {
   const g = new Game({ rng: seeded(5) });
-  g.setBoard(['.4........', '.3........', '111.......']);
+  g.setBoard(['.4.....', '.3.....', '111....']);
   g.chain = 1;
   g.startResolve();
   assert.equal(g.phase, 'clear');
   assert.equal(g.clearing.cells.size, 3);
   settle(g);
   const rows = boardRows(g);
-  assert.equal(rows[ROWS - 1], '.3........');
-  assert.equal(rows[ROWS - 2], '.4........');
+  assert.equal(rows[ROWS - 1], '.3.....');
+  assert.equal(rows[ROWS - 2], '.4.....');
 });
 
 test('vertical runs clear too, and full rows do nothing', () => {
   const g = new Game({ rng: seeded(6) });
-  g.setBoard(['2.........', '2.........', '2.........', '0123401234']);
+  g.setBoard(['2......', '2......', '2......', '0123401']);
   g.startResolve();
   assert.equal(g.clearing.cells.size, 3);
   settle(g);
-  assert.equal(boardRows(g)[ROWS - 1], '0123401234', 'full row stays');
+  assert.equal(boardRows(g)[ROWS - 1], '0123401', 'full row stays');
 });
 
 test('cascades raise the chain counter and multiply points', () => {
   const g = new Game({ rng: seeded(8) });
   // Clearing 111 drops the 2 in column 2 into a row of three 2s.
-  g.setBoard(['..2.......', '11122.....']);
+  g.setBoard(['..2....', '11122..']);
   const chains = [];
   g.startResolve();
   for (let k = 0; k < 400 && g.phase !== 'spawn' && g.phase !== 'swap'; k++) {
@@ -137,7 +143,7 @@ test('cascades raise the chain counter and multiply points', () => {
 
 test('four in a row makes a line blaster at the moved cell', () => {
   const g = new Game({ rng: seeded(9) });
-  g.setBoard(['3333......']);
+  g.setBoard(['3333...']);
   g.focus = [idx(1, ROWS - 1)];
   g.startResolve();
   const made = g.clearing.created;
@@ -150,20 +156,20 @@ test('four in a row makes a line blaster at the moved cell', () => {
 
 test('L shape makes a bomb at the corner; five in a row makes a prism', () => {
   const g = new Game({ rng: seeded(10) });
-  g.setBoard(['1.........', '1.........', '111.......']);
+  g.setBoard(['1......', '1......', '111....']);
   g.startResolve();
   assert.equal(g.clearing.created[0].s, SP.BOMB);
   assert.equal(g.clearing.created[0].idx, idx(0, ROWS - 1));
 
   const h = new Game({ rng: seeded(11) });
-  h.setBoard(['22222.....']);
+  h.setBoard(['22222..']);
   h.startResolve();
   assert.equal(h.clearing.created[0].s, SP.PRISM);
 });
 
 test('a matched line blaster clears its whole row', () => {
   const g = new Game({ rng: seeded(12) });
-  g.setBoard(['0123401234', '1h110340202']);
+  g.setBoard(['0123401', '1h110342']);
   g.startResolve();
   for (let x = 0; x < COLS; x++) assert.ok(g.clearing.cells.has(idx(x, ROWS - 1)), 'x=' + x);
   assert.ok(g.clearing.effects.some((e) => e.t === 'lineH'));
@@ -171,7 +177,7 @@ test('a matched line blaster clears its whole row', () => {
 
 test('a matched bomb clears 3x3 and chains into other specials', () => {
   const g = new Game({ rng: seeded(13) });
-  g.setBoard(['..........', '.4v.......', '.2b22.....', '..........'.replace(/\./g, '3')]);
+  g.setBoard(['.......', '.4v....', '.2b22..', '3333333']);
   g.startResolve();
   // bomb at (2, row 18) clears 3x3, which includes the vertical blaster at (2, row 17)
   assert.ok(g.clearing.effects.some((e) => e.t === 'bomb'));
@@ -180,7 +186,7 @@ test('a matched bomb clears 3x3 and chains into other specials', () => {
 
 test('a matched prism removes every block of its color', () => {
   const g = new Game({ rng: seeded(14) });
-  g.setBoard(['3...3...3.', '1.2.1.2.1.', '33p3......']);
+  g.setBoard(['3..3..3', '1.2.1.2', '33p3...']);
   g.startResolve();
   for (let i = 0; i < g.board.length; i++) {
     if (g.board[i] && g.board[i].c === 3) assert.ok(g.clearing.cells.has(i), 'clears color 3 at ' + i);
@@ -189,7 +195,7 @@ test('a matched prism removes every block of its color', () => {
 
 test('illegal swaps bounce back and cost nothing', () => {
   const g = new Game({ rng: seeded(15) });
-  g.setBoard(['1.........', '0122......']);
+  g.setBoard(['1......', '0122...']);
   g.tokens = 1;
   g.computeLegal();
   g.phase = 'swap';
@@ -199,14 +205,14 @@ test('illegal swaps bounce back and cost nothing', () => {
   assert.equal(g.tokens, 1, 'illegal swap is free');
   settle(g);
   assert.equal(g.phase, 'swap');
-  assert.deepEqual(boardRows(g).slice(-2), ['1.........', '0122......']);
+  assert.deepEqual(boardRows(g).slice(-2), ['1......', '0122...']);
   assert.equal(g.trySwap(idx(0, ROWS - 1), idx(2, ROWS - 1)), 'adjacent');
   assert.equal(g.trySwap(idx(5, ROWS - 1), idx(6, ROWS - 1)), 'empty');
 });
 
 test('legal swap spends a banked swap and clears a run of three', () => {
   const g = new Game({ rng: seeded(16) });
-  g.setBoard(['1131......']);
+  g.setBoard(['1131...']);
   g.tokens = 1;
   g.phase = 'swap';
   g.computeLegal();
@@ -231,7 +237,7 @@ test('landings and clears charge the swap meter', () => {
   g.charge(PF.METER_MAX * 10);
   assert.equal(g.tokens, PF.MAX_TOKENS);
   assert.ok(g.meter <= PF.METER_MAX);
-  g.setBoard(['1131......']);
+  g.setBoard(['1131...']);
   g.tokens = 2;
   g.phase = 'swap';
   g.computeLegal();
@@ -241,7 +247,7 @@ test('landings and clears charge the swap meter', () => {
 
 test('prism swapped with any block wipes that color', () => {
   const g = new Game({ rng: seeded(17) });
-  g.setBoard(['2...2...2.', '0p2.......']);
+  g.setBoard(['2..2..2', '0p2....']);
   g.tokens = 1;
   g.phase = 'swap';
   g.computeLegal();
@@ -256,7 +262,7 @@ test('prism swapped with any block wipes that color', () => {
 
 test('two line blasters swapped together fire a cross', () => {
   const g = new Game({ rng: seeded(18) });
-  g.setBoard(['0123401234', '1234012340', '23h4v0123412']);
+  g.setBoard(['0123401', '1234012', '23h4v0123']);
   g.tokens = 1;
   g.phase = 'swap';
   g.computeLegal();
@@ -275,8 +281,8 @@ test('two line blasters swapped together fire a cross', () => {
 test('bomb plus bomb detonates 5x5', () => {
   const g = new Game({ rng: seeded(25) });
   const rows = [];
-  for (let r = 0; r < 7; r++) rows.push(r % 2 ? '1234012340' : '0123401234');
-  rows[6] = '01b2b4012341';
+  for (let r = 0; r < 7; r++) rows.push(r % 2 ? '1234012' : '0123401');
+  rows[6] = '01b2b4012';
   g.setBoard(rows);
   const a = idx(1, ROWS - 1);
   const b = idx(2, ROWS - 1);
@@ -293,7 +299,7 @@ test('bomb plus bomb detonates 5x5', () => {
 test('swap phase only opens when a legal swap exists', () => {
   const g = new Game({ rng: seeded(19) });
   settle(g);
-  g.setBoard(['0123401234']);
+  g.setBoard(['0123401']);
   g.piece = g.makePiece({ type: 'O', colors: [0, 0, 0, 0] });
   g.piece.x = 0;
   g.piece.y = 0;
@@ -348,17 +354,17 @@ test('serialize and restore round-trips the state', () => {
 
 test('scoring: longer runs and chains are worth more', () => {
   const a = new Game({ rng: seeded(23) });
-  a.setBoard(['111.......']);
+  a.setBoard(['111....']);
   a.chain = 1;
   a.beginClear(a.findGroups(), null);
   const three = a.score;
   const b = new Game({ rng: seeded(23) });
-  b.setBoard(['1111......']);
+  b.setBoard(['1111...']);
   b.chain = 1;
   b.beginClear(b.findGroups(), null);
   assert.ok(b.score > three);
   const c = new Game({ rng: seeded(23) });
-  c.setBoard(['111.......']);
+  c.setBoard(['111....']);
   c.chain = 3;
   c.beginClear(c.findGroups(), null);
   assert.equal(c.score, three * 3);
@@ -384,8 +390,8 @@ test('random play never throws and always settles (fuzz)', () => {
           const [a, b] = g.legal[Math.floor(rng() * g.legal.length)];
           assert.equal(g.trySwap(a, b), 'ok');
         } else if (rng() < 0.5) {
-          const i = Math.floor(rng() * 200);
-          const j = i + (rng() < 0.5 ? 1 : 10);
+          const i = Math.floor(rng() * COLS * ROWS);
+          const j = i + (rng() < 0.5 ? 1 : COLS);
           g.trySwap(i, j);
           g.update(0.05);
         } else g.skipSwap();
@@ -400,4 +406,17 @@ test('random play never throws and always settles (fuzz)', () => {
     }
     assert.ok(g.phase === 'over' || steps === 20000);
   }
+});
+
+test('board is 7 columns by 16 rows and rejects over-wide fixtures', () => {
+  assert.equal(COLS, 7);
+  assert.equal(ROWS, 16);
+  const g = new Game({ rng: seeded(30) });
+  assert.equal(g.board.length, 7 * 16);
+  assert.throws(() => g.setBoard(['01234012']), /wider than 7/);
+});
+
+test('saves from the old 10x20 board are ignored', () => {
+  const old = { v: 1, board: new Array(200).fill(0), queue: [], bag: [] };
+  assert.equal(Game.restore(old), null);
 });

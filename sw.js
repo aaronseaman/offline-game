@@ -1,5 +1,5 @@
 /* Prismfall service worker: precache the app shell, serve it offline, refresh in the background. */
-const VERSION = 'prismfall-v2-molded';
+const VERSION = 'prismfall-v3';
 const SHELL = [
   './',
   './index.html',

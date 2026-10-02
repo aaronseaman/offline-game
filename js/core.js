@@ -9,8 +9,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const COLS = 10;
-  const ROWS = 20;
+  const COLS = 7;
+  const ROWS = 16;
   const MAX_LEVEL = 25;
   const BLOCKS_PER_LEVEL = 45;
 
@@ -26,7 +26,7 @@
     CLEAR: 0.3,
     CLEAR_FX: 0.44,
     DROP_ACCEL: 150, // rows / s^2 for the post-clear gravity animation
-    DROP_SETTLE: 0.05,
+    DROP_SETTLE: 0.1,
     SWAP: 0.14,
   };
 
@@ -228,7 +228,8 @@
       const sh = SHAPES[def.type];
       const cells = sh.cells.map(([x, y], k) => ({ x, y, c: def.colors[k] }));
       const minY = Math.min.apply(null, cells.map((c) => c.y));
-      return { type: def.type, def, cells, rot: 0, x: def.type === 'O' ? 4 : 3, y: -minY, id: this.nextId++ };
+      // centered: 3-wide shapes in columns 2-4, the I in 1-4, the O in 2-3
+      return { type: def.type, def, cells, rot: 0, x: Math.floor((COLS - sh.n) / 2), y: -minY, id: this.nextId++ };
     }
     fits(cells, px, py) {
       for (const c of cells) {
@@ -969,7 +970,7 @@
     /** Snapshot taken at spawn time: restoring it replays the current piece from the top. */
     serialize() {
       return {
-        v: 1,
+        v: 2,
         board: this.board.map((c) => (c ? [c.c, c.s] : 0)),
         current: this.piece ? this.piece.def : null,
         hold: this.hold,
@@ -986,7 +987,7 @@
     }
     static restore(data, opts) {
       const g = new Game(opts);
-      if (!data || data.v !== 1 || !Array.isArray(data.board) || data.board.length !== COLS * ROWS) return null;
+      if (!data || data.v !== 2 || !Array.isArray(data.board) || data.board.length !== COLS * ROWS) return null;
       g.board = data.board.map((v) => (v ? g.mkCell(v[0], v[1]) : null));
       g.hold = data.hold || null;
       g.holdUsed = !!data.holdUsed;
@@ -1044,10 +1045,12 @@
             else if (nx === 'b') s = SP.BOMB;
             else if (nx === 'p') s = SP.PRISM;
             if (s) k++;
+            if (x >= COLS) throw new Error('setBoard: row ' + r + ' is wider than ' + COLS + ' columns');
             this.board[idx(x, offset + r)] = this.mkCell(+ch, s);
             x++;
           }
         }
+        if (x > COLS) throw new Error('setBoard: row ' + r + ' is wider than ' + COLS + ' columns');
       });
     }
   }

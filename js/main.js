@@ -174,6 +174,7 @@
       move: () => tone(950, 0.025, { type: 'square', vol: 0.018 }),
       rotate: () => tone(600, 0.05, { type: 'triangle', vol: 0.06, to: 900 }),
       land: () => tone(200, 0.05, { vol: 0.05 }),
+      bump: () => tone(150, 0.045, { type: 'triangle', vol: 0.035 }),
       lock: () => {
         tone(160, 0.09, { vol: 0.12, to: 90 });
         noise(0.05, { vol: 0.04, freq: 1600 });
@@ -479,7 +480,11 @@
   let kcur = -1;
   let keyMode = false;
   let dirty = true;
-  const vis = { id: 0, x: 0, y: 0 };
+  // Visual-only state for the falling piece: position easing, rotation tween, wall bump, spawn fade.
+  const vis = { id: 0, x: 0, y: 0, rot: 0, bumpX: 0, bumpV: 0, wiggle: 0, wiggleV: 0, spawnT: 1 };
+  // Small action animations: board thump, HUD pops. All scale with MOTION.
+  const MOTION = reducedMotion ? 0 : 1;
+  const anim = { kick: 0, kickV: 0, kickStyle: '', holdPop: 0, queuePop: 0, queueHead: null, scorePop: 0, levelPop: 0, pips: [1, 1, 1], tokens: -1 };
   const disp = { score: 0 };
   let firstGame = !store.get('pf.played', false);
 
@@ -497,6 +502,8 @@
     tokenPulse: 0,
     failCells: null,
     failT: 0,
+    squash: new Map(),
+    hardLock: false,
   };
   function resetFx() {
     fx.particles.length = 0;
@@ -506,7 +513,50 @@
     fx.banners.length = 0;
     fx.flashes.clear();
     fx.pops.clear();
+    fx.squash.clear();
     fx.shake = 0;
+    fx.hardLock = false;
+    anim.kick = anim.kickV = anim.holdPop = anim.queuePop = anim.scorePop = anim.levelPop = 0;
+    anim.queueHead = null;
+    anim.tokens = -1;
+  }
+
+  // Damped spring toward zero; used for the wall bump, rotation wiggle and board thump.
+  function spring(o, key, vkey, dt, k, c) {
+    o[vkey] += (-k * o[key] - c * o[vkey]) * dt;
+    o[key] += o[vkey] * dt;
+    if (Math.abs(o[key]) < 1e-3 && Math.abs(o[vkey]) < 1e-2) o[key] = o[vkey] = 0;
+  }
+  function bumpWall(dir) {
+    if (!MOTION || !game || game.phase !== 'fall') return;
+    if (Math.abs(vis.bumpX) < 0.03 && Math.abs(vis.bumpV) < 0.6) {
+      vis.bumpV = dir * 3.4;
+      sfx.bump();
+    }
+  }
+  function wiggle(dir) {
+    if (!MOTION) return;
+    vis.wiggleV = dir * 4.5;
+    sfx.bump();
+  }
+  // a short puff where a hard-dropped shape hits
+  function dust(x, y) {
+    for (let k = 0; k < 3; k++) {
+      fx.particles.push({
+        x: x + (Math.random() - 0.5) * L.cell * 0.7,
+        y,
+        vx: (Math.random() - 0.5) * L.cell * 3.2,
+        vy: -L.cell * (0.6 + Math.random() * 1.2),
+        t: 0,
+        life: 0.28 + Math.random() * 0.16,
+        size: L.cell * (0.07 + Math.random() * 0.06),
+        rot: 0,
+        vr: 0,
+        color: 'rgba(244,240,232,0.85)',
+        g: 0.12,
+        round: true,
+      });
+    }
   }
 
   const cellX = (i) => L.bx + (i % COLS) * L.cell;
@@ -575,6 +625,12 @@
           vis.id = e.piece.id;
           vis.x = e.piece.x;
           vis.y = e.piece.y;
+          vis.rot = vis.wiggle = vis.wiggleV = vis.bumpX = vis.bumpV = 0;
+          vis.spawnT = MOTION ? 0 : 1;
+          if (game.queue[0] !== anim.queueHead) {
+            anim.queueHead = game.queue[0];
+            anim.queuePop = MOTION;
+          }
           saveGame();
           break;
         case 'move':
@@ -582,27 +638,41 @@
           break;
         case 'rotate':
           sfx.rotate();
+          // the cells are already turned; start the drawing a quarter turn back and ease it in
+          if (MOTION) vis.rot = clamp(vis.rot - e.dir * (Math.PI / 2), -Math.PI, Math.PI);
           break;
         case 'land':
           sfx.land();
           break;
         case 'harddrop': {
           sfx.hard();
-          shake(L.cell * 0.12);
+          anim.kickV = L.cell * 2.6 * MOTION;
+          fx.hardLock = true;
           const p = e.piece;
+          const bottoms = new Map();
           for (const c of p.cells) {
             fx.trails.push({ x: p.x + c.x, y0: e.fromY + c.y, y1: p.y + c.y, c: c.c, t: 0 });
+            const bx = p.x + c.x;
+            bottoms.set(bx, Math.max(bottoms.has(bx) ? bottoms.get(bx) : -99, p.y + c.y));
           }
+          if (MOTION && e.dist > 0) for (const [bx, by] of bottoms) dust(L.bx + (bx + 0.5) * L.cell, L.by + (by + 1) * L.cell);
           break;
         }
         case 'lock': {
           sfx.lock();
           const now = performance.now();
-          for (const i of e.cells) if (game.board[i]) fx.flashes.set(game.board[i].id, now);
+          const amp = (fx.hardLock ? 0.2 : 0.12) * MOTION;
+          fx.hardLock = false;
+          for (const i of e.cells) {
+            if (!game.board[i]) continue;
+            fx.flashes.set(game.board[i].id, now);
+            if (amp) fx.squash.set(game.board[i].id, { t: now, amp });
+          }
           break;
         }
         case 'hold':
           sfx.hold();
+          anim.holdPop = MOTION;
           break;
         case 'clear':
           onClear(e);
@@ -616,6 +686,7 @@
         }
         case 'levelup': {
           sfx.level();
+          anim.levelPop = 1;
           const sub = e.newColor ? 'New color: ' + COLORS[game.paletteSize() - 1].name : 'Faster drops';
           addBanner('LEVEL ' + e.level, sub, '#ffffff');
           break;
@@ -652,6 +723,7 @@
 
   function onClear(e) {
     sfx.clear(e.chain);
+    anim.scorePop = 1;
     if (e.cells.length >= 6 || e.chain >= 2) Haptics.tap();
     let sx = 0;
     let sy = 0;
@@ -709,8 +781,12 @@
   // ===================================================================
   // Rendering
   // ===================================================================
-  function drawPieceIn(r, def, alpha, labelSpace) {
+  // `pop` runs 0 -> 1 after a change; the shape grows in with a little overshoot.
+  function drawPieceIn(r, def, alpha, labelSpace, pop) {
     if (!def) return;
+    const t = pop == null ? 1 : clamp(pop, 0, 1);
+    if (t <= 0) return;
+    const sc = t >= 1 ? 1 : 0.55 + 0.45 * easeOutBack(t);
     const sh = PF.SHAPES[def.type];
     const xs = sh.cells.map((c) => c[0]);
     const ys = sh.cells.map((c) => c[1]);
@@ -724,11 +800,19 @@
     const s = Math.min((r.w * 0.78) / Math.max(cw, 3), ((r.h - top) * 0.72) / Math.max(ch, 2), L.cell * 0.9);
     const ox = r.x + (r.w - cw * s) / 2;
     const oy = r.y + top + (r.h - top - ch * s) / 2;
-    ctx.globalAlpha = alpha;
+    ctx.save();
+    if (sc !== 1) {
+      const mx = ox + (cw * s) / 2;
+      const my = oy + (ch * s) / 2;
+      ctx.translate(mx, my);
+      ctx.scale(sc, sc);
+      ctx.translate(-mx, -my);
+    }
+    ctx.globalAlpha = alpha * Math.min(1, t * 1.6);
     sh.cells.forEach((c, k) => {
       ctx.drawImage(SPR.blocks[def.colors[k]][0], ox + (c[0] - minX) * s, oy + (c[1] - minY) * s, s, s);
     });
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   function fitFont(text, weight, family, size, maxW) {
@@ -784,8 +868,15 @@
   }
 
   function drawLevelPill(x, y, w, h) {
+    const pulse = MOTION ? Math.sin(Math.PI * (1 - anim.levelPop)) * Math.min(1, anim.levelPop * 3) : 0;
+    ctx.save();
+    if (pulse > 0.001) {
+      ctx.translate(x + w / 2, y + h / 2);
+      ctx.scale(1 + 0.1 * pulse, 1 + 0.1 * pulse);
+      ctx.translate(-(x + w / 2), -(y + h / 2));
+    }
     rr(ctx, x, y, w, h, h / 2);
-    ctx.fillStyle = 'rgba(64,79,85,0.055)';
+    ctx.fillStyle = 'rgba(64,79,85,' + (0.055 + 0.12 * anim.levelPop) + ')';
     ctx.fill();
     const fs = h * 0.5;
     ctx.textBaseline = 'middle';
@@ -812,6 +903,7 @@
       ctx.fill();
     }
     ctx.textBaseline = 'alphabetic';
+    ctx.restore();
   }
 
   function drawSwapPill(x, y, w, h) {
@@ -821,7 +913,12 @@
     drawSwapIcon(x + h * 0.62, y + h * 0.48, h * 0.6, '#8b661e');
     const pr = h * 0.18;
     const px0 = x + h * 1.3;
-    for (let k = 0; k < PF.MAX_TOKENS; k++) drawPip(px0 + k * pr * 2.7, y + h * 0.42, pr, k < game.tokens);
+    for (let k = 0; k < PF.MAX_TOKENS; k++) {
+      const filled = k < game.tokens;
+      const t = filled ? clamp(anim.pips[k], 0, 1) : 1;
+      if (filled && t < 1) drawPip(px0 + k * pr * 2.7, y + h * 0.42, pr, false);
+      drawPip(px0 + k * pr * 2.7, y + h * 0.42, pr * (t < 1 ? easeOutBack(t) * 1.15 : 1), filled);
+    }
     const mx = px0 - pr;
     const mw = x + w - h * 0.4 - mx;
     rr(ctx, mx, y + h * 0.74, mw, 2.5, 1.25);
@@ -835,11 +932,25 @@
     }
   }
 
+  // Score text swells briefly when points land, anchored at its left baseline.
+  function drawScoreText(text, x, y) {
+    const pop = MOTION ? Math.sin(Math.PI * (1 - anim.scorePop)) * anim.scorePop : 0;
+    if (pop <= 0.001) {
+      ctx.fillText(text, x, y);
+      return;
+    }
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1 + 0.12 * pop, 1 + 0.12 * pop);
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+
   function drawHUD() {
-    drawPieceIn(L.hold, game.hold, game.holdUsed ? 0.3 : 1, true);
-    drawPieceIn(L.next[0], game.queue[0], 1, true);
-    drawPieceIn(L.next[1], game.queue[1], 0.85, false);
-    drawPieceIn(L.next[2], game.queue[2], 0.7, false);
+    drawPieceIn(L.hold, game.hold, game.holdUsed ? 0.3 : 1, true, 1 - anim.holdPop);
+    // the queue shuffles forward in a quick stagger after each spawn
+    const qp = 1 - anim.queuePop;
+    for (let k = 0; k < 3; k++) drawPieceIn(L.next[k], game.queue[k], [1, 0.85, 0.7][k], k === 0, qp * 1.35 - k * 0.17);
 
     const I = L.info;
     const scoreText = fmt(disp.score);
@@ -851,7 +962,7 @@
       tracked(ctx, 'SCORE', I.x, I.y + lf * 1.3, lf * 0.14);
       const size = fitFont(scoreText, '700', FD, clamp(I.h * 0.36, 18, 32), I.w - 42);
       ctx.fillStyle = '#34434c';
-      ctx.fillText(scoreText, I.x, I.y + lf * 1.5 + size * 1.05);
+      drawScoreText(scoreText, I.x, I.y + lf * 1.5 + size * 1.05);
       const ph = clamp(I.h * 0.28, 17, 24);
       const py = I.y + I.h - ph;
       const lw = I.w * 0.44;
@@ -865,7 +976,7 @@
       tracked(ctx, 'SCORE', I.x + 2, y + 12, 1.5);
       const size = fitFont(scoreText, '700', FD, 26, I.w);
       ctx.fillStyle = '#34434c';
-      ctx.fillText(scoreText, I.x + 2, y + 16 + size);
+      drawScoreText(scoreText, I.x + 2, y + 16 + size);
       y += 24 + size + 14;
       drawLevelPill(I.x, y, I.w, 26);
       y += 36;
@@ -877,12 +988,18 @@
     }
   }
 
-  function drawCellAt(c, x, y, s, scale, deadNow) {
+  // Draws a block scaled about its center; `sq` squashes it onto its bottom edge (landing impact).
+  function cellRect(x, y, s, scale, sq) {
+    const w = s * scale * (1 + sq * 0.6);
+    const h = s * scale * (1 - sq);
+    return [x + (s - w) / 2, y + (s + s * scale) / 2 - h, w, h];
+  }
+  function drawCellAt(c, x, y, s, scale, deadNow, sq) {
     const spr = deadNow ? SPR.dead[c.s] : SPR.blocks[c.c][c.s];
-    if (scale === 1) ctx.drawImage(spr, x, y, s, s);
+    if (scale === 1 && !sq) ctx.drawImage(spr, x, y, s, s);
     else {
-      const d = (s * (1 - scale)) / 2;
-      ctx.drawImage(spr, x + d, y + d, s * scale, s * scale);
+      const r = cellRect(x, y, s, scale, sq || 0);
+      ctx.drawImage(spr, r[0], r[1], r[2], r[3]);
     }
   }
 
@@ -914,13 +1031,13 @@
 
     // danger glow near the top
     const hi = g.highestRow();
-    if (hi <= 4 && app !== 'menu') {
-      const a = (0.18 + 0.12 * Math.sin(now / 180)) * (1 - hi / 5);
-      const dg = ctx.createLinearGradient(0, 0, 0, s * 4);
+    if (hi <= 3 && app !== 'menu') {
+      const a = (0.18 + 0.12 * Math.sin(now / 180)) * (1 - hi / 4);
+      const dg = ctx.createLinearGradient(0, 0, 0, s * 3);
       dg.addColorStop(0, 'rgba(255,40,80,' + a + ')');
       dg.addColorStop(1, 'rgba(255,40,80,0)');
       ctx.fillStyle = dg;
-      ctx.fillRect(0, 0, L.bw, s * 4);
+      ctx.fillRect(0, 0, L.bw, s * 3);
     }
 
     // column guides under the falling piece
@@ -966,6 +1083,11 @@
     const spE = easeOutCubic(sp);
     const dyingRows = app === 'dying' || app === 'over' ? Math.floor((overT / 0.9) * ROWS) : -1;
     const pulse = 0.5 + 0.5 * Math.sin(now / 220);
+    // lift over the whole move: out and back for an illegal swap, across for a legal one
+    const arc = swapping ? Math.sin(Math.PI * clamp(1 - g.timer / g.phaseDur, 0, 1)) * MOTION : 0;
+    // the block the player moved; it is drawn last so it passes over its partner
+    const movedIdx = g.phase === 'swapAnim' ? g.swapB : g.phase === 'swapBack' ? g.swapA : -1;
+    let deferred = null;
 
     for (let i = 0; i < COLS * ROWS; i++) {
       const c = g.board[i];
@@ -977,6 +1099,10 @@
       if (dropping && c.fall) {
         const off = Math.max(0, c.fall - 0.5 * T.DROP_ACCEL * g.dropT * g.dropT);
         y -= off * s;
+        // small rebound once it lands
+        const tLand = Math.sqrt((2 * c.fall) / T.DROP_ACCEL);
+        const u = (g.dropT - tLand) / 0.1;
+        if (u > 0 && u < 1) y -= Math.sin(u * Math.PI) * s * 0.06 * Math.min(1, c.fall / 2) * MOTION;
       }
       if (swapping && (i === g.swapA || i === g.swapB)) {
         let from;
@@ -993,6 +1119,8 @@
       }
       let scale = 1;
       let flash = 0;
+      let sq = 0;
+      if (swapping && (i === g.swapA || i === g.swapB)) scale = i === movedIdx ? 1 + 0.13 * arc : 1 - 0.08 * arc;
       if (clearing && clearing.cells.has(i)) {
         if (cp < 0.3) {
           scale = 1 + 0.14 * (cp / 0.3);
@@ -1015,10 +1143,16 @@
         if (q >= 1) fx.flashes.delete(c.id);
         else flash = Math.max(flash, 0.55 * (1 - q));
       }
+      const squash = fx.squash.get(c.id);
+      if (squash) {
+        const q = (now - squash.t) / 240;
+        if (q >= 1) fx.squash.delete(c.id);
+        else sq = squash.amp * Math.sin(q * Math.PI * 1.5) * (1 - q);
+      }
       if (fx.failCells && fx.failT < 0.3 && (i === fx.failCells[0] || i === fx.failCells[1]) && g.phase !== 'swapBack') {
         x += Math.sin(fx.failT * 60) * s * 0.08 * (1 - fx.failT / 0.3);
       }
-      if (i === sel && g.phase === 'swap') scale *= 1.08;
+      if (i === sel && g.phase === 'swap') scale *= 1.08 + 0.025 * Math.sin(now / 130) * MOTION;
       // special glow
       if (c.s && !(clearing && clearing.cells.has(i))) {
         ctx.globalAlpha = 0.35 + 0.35 * pulse;
@@ -1026,13 +1160,27 @@
         ctx.globalAlpha = 1;
       }
       const deadNow = dyingRows >= 0 && ROWS - 1 - row < dyingRows;
-      drawCellAt(c, x, y, s, scale, deadNow);
+      if (i === movedIdx) {
+        deferred = [c, x, y, scale, deadNow, flash];
+        continue;
+      }
+      drawCellAt(c, x, y, s, scale, deadNow, sq);
       if (flash > 0.01) {
         ctx.globalAlpha = flash * 0.85;
-        const d = (s * (1 - scale)) / 2;
-        ctx.drawImage(SPR.white, x + d, y + d, s * scale, s * scale);
+        const r = cellRect(x, y, s, scale, sq);
+        ctx.drawImage(SPR.white, r[0], r[1], r[2], r[3]);
         ctx.globalAlpha = 1;
       }
+    }
+    if (deferred) {
+      const [c, x, y, scale, deadNow] = deferred;
+      // soft contact shadow under the lifted block
+      ctx.globalAlpha = 0.25 * arc;
+      ctx.fillStyle = '#10181e';
+      rr(ctx, x + s * 0.12, y + s * 0.2, s * 0.8, s * 0.8, s * 0.2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      drawCellAt(c, x, y - s * 0.06 * arc, s, scale, deadNow, 0);
     }
 
     // specials about to be created
@@ -1063,15 +1211,31 @@
         if (gy !== p.y) for (const c of p.cells) ctx.drawImage(SPR.ghost[c.c], (p.x + c.x) * s, (gy + c.y) * s, s, s);
       }
       const lockGlow = g.grounded ? clamp(g.lockTimer / T.LOCK_DELAY, 0, 1) : 0;
+      const n = PF.SHAPES[p.type].n;
+      const appear = easeOutCubic(clamp(vis.spawnT, 0, 1));
+      const ox = (vis.x + vis.bumpX) * s;
+      const oy = (vis.y - (1 - appear) * 0.6) * s;
+      const ang = vis.rot + vis.wiggle;
+      const cosA = Math.cos(ang);
+      const sinA = Math.sin(ang);
+      const half = (n * s) / 2;
+      const alpha = 0.25 + 0.75 * appear;
       for (const c of p.cells) {
-        const x = (vis.x + c.x) * s;
-        const y = (vis.y + c.y) * s;
-        ctx.drawImage(SPR.blocks[c.c][0], x, y, s, s);
+        // rotate each cell center about the shape's box center (the SRS pivot)
+        const dx = (c.x + 0.5) * s - half;
+        const dy = (c.y + 0.5) * s - half;
+        const cx = ox + half + dx * cosA - dy * sinA;
+        const cy = oy + half + dx * sinA + dy * cosA;
+        ctx.save();
+        ctx.translate(cx, cy);
+        if (ang) ctx.rotate(ang);
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(SPR.blocks[c.c][0], -s / 2, -s / 2, s, s);
         if (lockGlow > 0) {
           ctx.globalAlpha = lockGlow * 0.3;
-          ctx.drawImage(SPR.white, x, y, s, s);
-          ctx.globalAlpha = 1;
+          ctx.drawImage(SPR.white, -s / 2, -s / 2, s, s);
         }
+        ctx.restore();
       }
     }
 
@@ -1138,8 +1302,10 @@
     }
 
     // first-game control hints, kept just above the stack
-    if (firstGame && p && g.stats.pieces < 4 && hi > 6) {
-      const base = Math.min(L.bh - s * 0.5, hi * s - s * 0.6);
+    const ghostTop = p ? g.ghostY() + Math.min.apply(null, p.cells.map((c) => c.y)) : ROWS;
+    const hintBase = Math.min(L.bh - s * 0.5, Math.min(hi, ghostTop) * s - s * 0.6);
+    if (firstGame && p && g.stats.pieces < 4 && hintBase > s * 4) {
+      const base = hintBase;
       ctx.font = '600 ' + clamp(s * 0.34, 10, 14) + 'px ' + FU;
       ctx.fillStyle = 'rgba(230,232,255,0.45)';
       if (coarsePointer) {
@@ -1293,7 +1459,7 @@
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
-      rr(ctx, -p.size / 2, -p.size / 2, p.size, p.size, p.size * .35);
+      rr(ctx, -p.size / 2, -p.size / 2, p.size, p.size, p.round ? p.size / 2 : p.size * .35);
       ctx.fill();
       ctx.restore();
     }
@@ -1349,7 +1515,7 @@
     const G = L.cell * 22;
     for (const p of fx.particles) {
       p.t += dt;
-      p.vy += G * dt;
+      p.vy += G * (p.g == null ? 1 : p.g) * dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.rot += p.vr * dt;
@@ -1362,6 +1528,28 @@
     for (const tr of fx.trails) tr.t += dt;
     fx.trails = fx.trails.filter((tr) => tr.t < 0.22);
     fx.shake *= Math.pow(0.0005, dt);
+    vis.rot *= Math.exp(-dt * 24);
+    if (Math.abs(vis.rot) < 0.002) vis.rot = 0;
+    vis.spawnT = Math.min(1, vis.spawnT + dt / 0.16);
+    spring(vis, 'bumpX', 'bumpV', dt, 900, 38);
+    spring(vis, 'wiggle', 'wiggleV', dt, 900, 38);
+    spring(anim, 'kick', 'kickV', dt, 700, 30);
+    anim.holdPop = Math.max(0, anim.holdPop - dt / 0.28);
+    anim.queuePop = Math.max(0, anim.queuePop - dt / 0.34);
+    anim.scorePop = Math.max(0, anim.scorePop - dt / 0.3);
+    anim.levelPop = Math.max(0, anim.levelPop - dt / 0.6);
+    if (game) {
+      if (anim.tokens < 0) anim.tokens = game.tokens;
+      for (let k = anim.tokens; k < game.tokens; k++) anim.pips[k] = MOTION ? 0 : 1;
+      anim.tokens = game.tokens;
+      for (let k = 0; k < anim.pips.length; k++) anim.pips[k] = Math.min(1, anim.pips[k] + dt / 0.3);
+    }
+    // the whole console dips a few pixels on a hard drop
+    const kickStyle = Math.abs(anim.kick) > 0.05 ? 'translate3d(0,' + anim.kick.toFixed(2) + 'px,0)' : '';
+    if (kickStyle !== anim.kickStyle) {
+      anim.kickStyle = kickStyle;
+      canvas.style.transform = kickStyle;
+    }
     fx.tokenPulse = Math.max(0, fx.tokenPulse - dt * 1.5);
     if (fx.failCells) {
       fx.failT += dt;
@@ -1526,7 +1714,9 @@
       const target = inp.anchor + Math.round(dx / step);
       let guard = COLS;
       while (p.x !== target && guard-- > 0) {
-        if (!game.move(Math.sign(target - p.x))) {
+        const dir = Math.sign(target - p.x);
+        if (!game.move(dir)) {
+          bumpWall(dir);
           inp.anchor = p.x - Math.round(dx / step);
           break;
         }
@@ -1581,7 +1771,8 @@
     const v = velocity();
     if (inp.mode === 'piece' && game.piece && game.piece.id === inp.pieceId && game.phase === 'fall') {
       if (!inp.moved && dur < 350) {
-        game.rotate(x < L.bx + L.bw / 2 ? -1 : 1);
+        const dir = x < L.bx + L.bw / 2 ? -1 : 1;
+        if (!game.rotate(dir)) wiggle(dir);
         Haptics.tap();
       } else if (dy > L.cell * 1.2 && v.vy > 0.6 && Math.abs(dy) > Math.abs(dx)) {
         game.hardDrop();
@@ -1678,14 +1869,14 @@
         keys.dasDir = -1;
         keys.dasT = 0;
         keys.arrT = 0;
-        game.move(-1);
+        if (!game.move(-1)) bumpWall(-1);
         break;
       case 'ArrowRight':
         keys.right = true;
         keys.dasDir = 1;
         keys.dasT = 0;
         keys.arrT = 0;
-        game.move(1);
+        if (!game.move(1)) bumpWall(1);
         break;
       case 'ArrowDown':
         game.setSoftDrop(true);
@@ -1693,11 +1884,11 @@
       case 'ArrowUp':
       case 'x':
       case 'X':
-        if (!e.repeat) game.rotate(1);
+        if (!e.repeat && !game.rotate(1)) wiggle(1);
         break;
       case 'z':
       case 'Z':
-        if (!e.repeat) game.rotate(-1);
+        if (!e.repeat && !game.rotate(-1)) wiggle(-1);
         break;
       case ' ':
         if (!e.repeat) game.hardDrop();
@@ -1760,7 +1951,7 @@
 
   function loadSave() {
     const s = store.get('pf.save', null);
-    return s && s.v === 1 ? s : null;
+    return s && s.v === 2 ? s : null;
   }
   function saveGame() {
     if (game && game.phase !== 'over') store.set('pf.save', game.serialize());
