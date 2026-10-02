@@ -46,6 +46,7 @@ Sound effects, haptics (Vibration API, or the iOS 18+ switch tick), ghost piece,
 index.html            app shell, menus and overlays
 css/style.css         styles
 js/core.js            game engine: shapes, SRS rotation, matching, gravity, cascades, swaps, specials, scoring
+js/art.js             shared molded-plastic palette, tile shading and special artwork
 js/main.js            canvas renderer, touch and keyboard input, WebAudio sound, screens, save/resume
 sw.js                 service worker (precache + stale-while-revalidate)
 manifest.webmanifest  install metadata
@@ -55,6 +56,12 @@ tests/core.test.js    engine tests
 ```
 
 No build step and no runtime dependencies.
+
+## Artwork
+
+Tiles use a rounded-box height field, soft upper-left studio lighting, satin color and a shallow contact shadow. An ivory housing surrounds the recessed blue board. The palette, tile geometry and special symbols live in `js/art.js`, which is shared by gameplay, help illustrations, icons and launch screens. Shading is rasterized into the existing sprite cache when layout or symbol settings change, not every animation frame.
+
+Use `npm run assets` after changing tile art to regenerate all shipped icons and launch screens. Set `CHROMIUM_PATH` to an installed Chromium executable if Playwright's default browser is unavailable. See [the artwork review](docs/artwork-review.md) for screenshots and validation notes.
 
 ## Develop
 

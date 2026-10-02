@@ -1,4 +1,4 @@
-/* Layout: one full-screen canvas for the well and HUD; glass panels float above it for menus. */
+/* Warm molded housing, opaque ivory panels and restrained satin controls. */
 @font-face {
   font-family: 'Unbounded';
   font-style: normal;
@@ -8,17 +8,17 @@
 }
 
 :root {
-  color-scheme: dark;
-  --ink: #080a1a;
-  --ink-raised: rgba(16, 19, 44, 0.86);
-  --line: rgba(196, 202, 255, 0.13);
-  --text: #eef0ff;
-  --muted: #959bc6;
-  --gold: #ffd66b;
-  --paper: #f4f2ff;
-  --paper-ink: #16132e;
-  --danger: #ff7a8f;
-  --spectrum: linear-gradient(90deg, #ff3f66, #ff8327, #ffc83a, #2fd98a, #3c8dff, #b264ff);
+  color-scheme: light;
+  --ink: #e8e3da;
+  --ink-raised: #f5f1e9;
+  --line: rgba(61, 74, 80, 0.14);
+  --text: #34434c;
+  --muted: #636d72;
+  --gold: #8b661e;
+  --paper: #437d83;
+  --paper-ink: #ffffff;
+  --danger: #aa4c44;
+  --spectrum: linear-gradient(90deg, #cf6b61, #de8b48, #dbb354, #53a8ad, #527bb8, #99749f);
   --font-display: 'Unbounded', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
   --font-ui: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --sa-t: env(safe-area-inset-top, 0px);
@@ -102,14 +102,14 @@ body {
   display: grid;
   place-items: center;
   padding: calc(var(--sa-t) + 16px) calc(var(--sa-r) + 16px) calc(var(--sa-b) + 16px) calc(var(--sa-l) + 16px);
-  background: rgba(5, 6, 16, 0.5);
+  background: rgba(44, 54, 60, 0.28);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   overflow-y: auto;
   animation: fade-in 0.22s ease-out;
 }
 .overlay-menu {
-  background: rgba(5, 6, 16, 0.15);
+  background: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -120,9 +120,9 @@ body {
   border-radius: 28px;
   background: var(--ink-raised);
   border: 1px solid var(--line);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  -webkit-backdrop-filter: blur(22px) saturate(1.3);
-  backdrop-filter: blur(22px) saturate(1.3);
+  box-shadow: 0 20px 55px rgba(57, 60, 60, 0.18), 0 3px 0 #d3cec4, inset 0 1px 0 #fffdf7;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   text-align: center;
   animation: rise-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.15);
 }
@@ -168,7 +168,7 @@ h3 {
   font-size: 40px;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  background: linear-gradient(180deg, #ffffff, #c9c4ff);
+  background: linear-gradient(180deg, #34434c, #34434c);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -200,10 +200,10 @@ h3 {
   letter-spacing: -0.03em;
 }
 .logo h1 span:first-child {
-  color: #ffffff;
+  color: #34434c;
 }
 .logo h1 span:last-child {
-  background: var(--spectrum);
+  background: linear-gradient(#437d83, #437d83);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -214,7 +214,7 @@ h3 {
   margin: 14px auto 0;
   border-radius: 4px;
   background: var(--spectrum);
-  box-shadow: 0 0 18px rgba(178, 100, 255, 0.45);
+  box-shadow: none;
 }
 .tagline {
   margin: 0 0 22px;
@@ -240,7 +240,7 @@ h3 {
   padding: 12px 16px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(69, 85, 93, 0.055);
   color: var(--text);
   font: 600 16px/1.2 var(--font-ui);
   cursor: pointer;
@@ -265,17 +265,17 @@ h3 {
   color: var(--paper-ink);
   border-color: transparent;
   font-weight: 700;
-  box-shadow: 0 8px 28px rgba(160, 140, 255, 0.28);
+  box-shadow: 0 3px 0 #326067, 0 6px 12px rgba(48, 71, 73, 0.14);
 }
 .btn.primary:active {
-  background: #ffffff;
+  background: #376d73;
 }
 .btn.primary small {
   display: block;
   margin-top: 3px;
   font-weight: 600;
   font-size: 12px;
-  color: #5b5780;
+  color: #e0edef;
   font-variant-numeric: tabular-nums;
 }
 .btn.ghost {
@@ -291,7 +291,7 @@ h3 {
   margin: 4px 0 0;
   padding: 12px 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(69, 85, 93, 0.055);
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
@@ -310,7 +310,7 @@ h3 {
 .stats div {
   padding: 10px 6px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(69, 85, 93, 0.055);
 }
 .stats dt {
   font-size: 11px;
@@ -369,7 +369,7 @@ h3 {
   height: 31px;
   margin: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: #b9c0bd;
   transition: background 0.2s ease;
   cursor: pointer;
 }
@@ -386,7 +386,7 @@ h3 {
   transition: transform 0.2s cubic-bezier(0.3, 0.9, 0.4, 1.2);
 }
 .settings input:checked {
-  background: #2fd98a;
+  background: #437d83;
 }
 .settings input:checked::after {
   transform: translateX(20px);
@@ -417,7 +417,7 @@ h3 {
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(69, 85, 93, 0.055);
   color: var(--text);
   cursor: pointer;
 }
@@ -430,7 +430,7 @@ h3 {
   height: 112px;
   margin: 14px 0 0;
   border-radius: 18px;
-  background: rgba(11, 15, 38, 0.9);
+  background: #3a4a56;
   border: 1px solid var(--line);
 }
 .help-card ul {
@@ -441,10 +441,10 @@ h3 {
   gap: 8px;
   font-size: 15px;
   line-height: 1.45;
-  color: #d9dcf6;
+  color: #4e5c64;
 }
 .help-card b {
-  color: #ffffff;
+  color: #34434c;
 }
 .help-card .keys,
 .help-card .note {
@@ -482,10 +482,10 @@ h3 {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(69, 85, 93, 0.2);
 }
 .dots span.on {
-  background: #ffffff;
+  background: #437d83;
 }
 
 /* ---------- scores ---------- */
@@ -549,3 +549,15 @@ h3 {
     height: 88px;
   }
 }
+
+
+/* Physical surfaces share the tiles' upper-left studio light. */
+.btn:not(.primary):not(.ghost), .pause-btn, .close-btn {
+  background: linear-gradient(145deg, #fcf9f2, #e4dfd6);
+  box-shadow: 0 2px 0 #ccc8bf, 0 4px 8px rgba(48, 60, 66, .08);
+}
+.btn.primary { background: linear-gradient(145deg, #548e92, #397279); }
+.btn:active { box-shadow: none; transform: translateY(2px); }
+.logo h1 { font-weight: 800; letter-spacing: -.05em; }
+.logo h1 span:last-child { margin-top: 4px; }
+.spectrum { height: 5px; opacity: .85; width: 48%; }
