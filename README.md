@@ -67,6 +67,8 @@ npm run artifact      # single-file build in dist/prismfall.html
 
 When you change any shipped file, bump `VERSION` in `sw.js` so installed copies pick up the update.
 
-## Deploy with GitHub Pages
+## Deploy
 
-In the repository settings, open **Pages**, set **Source** to *Deploy from a branch*, choose `main` and `/ (root)`, and save. The game is then served at `https://<user>.github.io/<repo>/`. All paths are relative, so it works from a subfolder.
+The game is live at **https://aaronseaman.github.io/offline-game/**.
+
+GitHub Pages serves the `gh-pages` branch. On every push to `main`, the *Publish to GitHub Pages* workflow runs the engine tests and, if they pass, copies `main` to `gh-pages`. All paths are relative, so the game also works from any other static host or subfolder.

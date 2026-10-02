@@ -1,0 +1,30 @@
+# Runs the engine tests on every push to main, then publishes main to the
+# gh-pages branch that GitHub Pages serves.
+name: Publish to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Engine tests
+        run: npm test
+      - name: Publish to gh-pages
+        run: git push --force origin HEAD:refs/heads/gh-pages
