@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Prismfall",
+  "short_name": "Prismfall",
+  "description": "Drop shapes, match colors, chain the fall. A falling-block puzzle where runs of three or more same-colored blocks clear.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080a1a",
+  "theme_color": "#080a1a",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

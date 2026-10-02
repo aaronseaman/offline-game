@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Prismfall</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Drop shapes, match colors, chain the fall. A falling-block puzzle where runs of three or more same-colored blocks clear and cascades multiply your score.">
+  <meta name="theme-color" content="#080a1a">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Prismfall">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <!-- iOS launch screens (portrait) -->
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1320x2868.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1260x2736.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1206x2622.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1290x2796.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1179x2556.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/splash-1170x2532.png">
+  <link rel="preload" href="fonts/unbounded-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game" aria-label="Prismfall game board"></canvas>
+  <div id="sa-probe" aria-hidden="true"></div>
+
+  <button id="pause-btn" class="pause-btn" type="button" aria-label="Pause" hidden>
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
+  </button>
+
+  <!-- Main menu -->
+  <section id="menu" class="overlay overlay-menu" aria-labelledby="logo-title">
+    <div class="panel menu-panel">
+      <div class="logo">
+        <h1 id="logo-title"><span>PRISM</span><span>FALL</span></h1>
+        <div class="spectrum" aria-hidden="true"></div>
+      </div>
+      <p class="tagline">Drop shapes. Match colors.<br>Chain the fall.</p>
+      <div class="stack">
+        <button id="btn-continue" class="btn primary" type="button" hidden>Continue <small id="continue-score"></small></button>
+        <button id="btn-new" class="btn primary" type="button">Play</button>
+        <div class="btn-row">
+          <button id="btn-help" class="btn" type="button">How to play</button>
+          <button id="btn-scores" class="btn" type="button">Scores</button>
+        </div>
+        <button id="btn-settings" class="btn ghost" type="button">Settings</button>
+        <button id="btn-install" class="btn ghost" type="button" hidden>Install app</button>
+      </div>
+      <p id="menu-best" class="best"></p>
+      <p id="install-hint" class="hint" hidden>For full-screen offline play, tap <b>Share</b> then <b>Add to Home Screen</b>.</p>
+    </div>
+  </section>
+
+  <!-- Pause -->
+  <section id="pause" class="overlay" aria-labelledby="pause-title" hidden>
+    <div class="panel">
+      <p class="eyebrow">Paused</p>
+      <h2 id="pause-title" class="score-big"><span id="pause-score">0</span></h2>
+      <p id="pause-level" class="best">Level 1</p>
+      <div class="stack">
+        <button id="btn-resume" class="btn primary" type="button" data-autofocus>Resume</button>
+        <button id="btn-restart" class="btn" type="button">Restart</button>
+        <div class="btn-row">
+          <button id="btn-p-help" class="btn" type="button">How to play</button>
+          <button id="btn-p-settings" class="btn" type="button">Settings</button>
+        </div>
+        <button id="btn-quit" class="btn ghost" type="button">Save and quit</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game over -->
+  <section id="over" class="overlay" aria-labelledby="over-title" hidden>
+    <div class="panel">
+      <p class="eyebrow">The well overflowed</p>
+      <h2 id="over-title">Game over</h2>
+      <div id="over-score" class="score-big">0</div>
+      <p id="over-best" class="best"></p>
+      <dl class="stats">
+        <div><dt>Level</dt><dd id="st-level">1</dd></div>
+        <div><dt>Blocks</dt><dd id="st-cleared">0</dd></div>
+        <div><dt>Best chain</dt><dd id="st-chain">–</dd></div>
+        <div><dt>Specials</dt><dd id="st-specials">0</dd></div>
+        <div><dt>Shapes</dt><dd id="st-pieces">0</dd></div>
+        <div><dt>Time</dt><dd id="st-time">0:00</dd></div>
+      </dl>
+      <div class="stack">
+        <button id="btn-again" class="btn primary" type="button" data-autofocus>Play again</button>
+        <button id="btn-over-menu" class="btn ghost" type="button">Main menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="settings" class="overlay" aria-labelledby="settings-title" hidden>
+    <div class="panel">
+      <h2 id="settings-title">Settings</h2>
+      <ul class="settings">
+        <li><label for="set-sound"><span><b>Sound effects</b></span><input type="checkbox" id="set-sound"></label></li>
+        <li><label for="set-haptics"><span><b>Haptics</b><small>Taps on supported devices</small></span><input type="checkbox" id="set-haptics"></label></li>
+        <li><label for="set-ghost"><span><b>Ghost piece</b><small>Shows where the shape will land</small></span><input type="checkbox" id="set-ghost"></label></li>
+        <li><label for="set-symbols"><span><b>Color symbols</b><small>A shape on each color, for color-blind play</small></span><input type="checkbox" id="set-symbols"></label></li>
+        <li><label for="set-relaxed"><span><b>Untimed swaps</b><small>The swap window waits until you swap or skip</small></span><input type="checkbox" id="set-relaxed"></label></li>
+      </ul>
+      <div class="stack">
+        <button id="btn-settings-done" class="btn primary" type="button">Done</button>
+        <button id="btn-reset-scores" class="btn ghost danger" type="button">Reset high scores</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- How to play -->
+  <section id="help" class="overlay" aria-labelledby="help-title" hidden>
+    <div class="panel help-panel">
+      <div class="help-head">
+        <h2 id="help-title">How to play</h2>
+        <button id="help-close" class="close-btn" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <article class="help-card">
+        <canvas class="help-art" data-art="controls" aria-hidden="true"></canvas>
+        <h3>Steer the shape</h3>
+        <ul>
+          <li><b>Drag</b> left or right to move.</li>
+          <li><b>Tap</b> the right half to rotate clockwise, the left half to rotate back.</li>
+          <li><b>Drag down</b> to soft drop. <b>Flick down</b> to drop instantly.</li>
+          <li><b>Flick up</b> or tap <b>HOLD</b> to keep a shape for later.</li>
+        </ul>
+        <p class="keys">Keyboard: ← → move · ↑ or X rotate · Z rotate back · ↓ soft drop · Space drop · C hold · P pause</p>
+      </article>
+      <article class="help-card" hidden>
+        <canvas class="help-art" data-art="match" aria-hidden="true"></canvas>
+        <h3>Match colors, not rows</h3>
+        <ul>
+          <li>Line up <b>3 or more</b> blocks of one color in a row or column to clear them. Full rows do nothing.</li>
+          <li>Blocks above fall straight down and can match again. Each cascade step multiplies your points.</li>
+          <li>Speed rises each level and a sixth color joins at level 5. If a new shape can't enter at the top, the game ends.</li>
+        </ul>
+      </article>
+      <article class="help-card" hidden>
+        <canvas class="help-art" data-art="swap" aria-hidden="true"></canvas>
+        <h3>Swap to finish a match</h3>
+        <ul>
+          <li>When a shape lands and you have a <b>swap</b> banked, glowing blocks show every swap that makes a match.</li>
+          <li>Tap a block, then a neighbor. Or drag it onto the neighbor. Tap empty space to skip.</li>
+          <li>Each landing and each cleared block fills the <b>gold meter</b>. A full meter is one swap, and you can bank 3. Chains of 3 and 5 give a swap outright.</li>
+        </ul>
+      </article>
+      <article class="help-card" hidden>
+        <h3>Special blocks</h3>
+        <ul class="specials">
+          <li><canvas class="sp-icon" data-sp="1" data-c="3" aria-hidden="true"></canvas><span><b>4 in a line → Line blaster.</b> When matched it clears its whole row or column, along its stripes.</span></li>
+          <li><canvas class="sp-icon" data-sp="3" data-c="0" aria-hidden="true"></canvas><span><b>L or T shape → Bomb.</b> Clears a 3×3 area.</span></li>
+          <li><canvas class="sp-icon" data-sp="4" data-c="4" aria-hidden="true"></canvas><span><b>5 in a line → Prism.</b> Clears every block of its color. Swap it with any block to wipe out that block's color instead.</span></li>
+        </ul>
+        <p class="note">Swap two specials into each other for a bigger blast: crosses, 5×5 explosions, or whole colors at once.</p>
+      </article>
+      <div class="help-nav">
+        <button id="help-prev" class="btn" type="button">Back</button>
+        <div id="help-dots" class="dots" aria-hidden="true"></div>
+        <button id="help-next" class="btn primary" type="button">Next</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scores -->
+  <section id="scores" class="overlay" aria-labelledby="scores-title" hidden>
+    <div class="panel">
+      <h2 id="scores-title">High scores</h2>
+      <ol id="score-list" class="score-list"></ol>
+      <div class="stack">
+        <button id="btn-scores-done" class="btn primary" type="button">Done</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="js/core.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
