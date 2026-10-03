@@ -407,11 +407,17 @@
   let bgPlay = null;
 
   function paintBase(c) {
-    const grd = c.createLinearGradient(0, 0, W * .7, H);
-    grd.addColorStop(0, '#f2eee7');
-    grd.addColorStop(1, '#d9d5ce');
-    c.fillStyle = grd;
-    c.fillRect(0, 0, W, H);
+    const sky=c.createLinearGradient(0,0,W*.3,H);
+    sky.addColorStop(0,'#169bff');sky.addColorStop(.48,'#72dcff');sky.addColorStop(1,'#c6a6ff');
+    c.fillStyle=sky;c.fillRect(0,0,W,H);
+    // Broad, simple cloud forms share the pieces' glossy shape language.
+    for(const [x,y,r] of [[-.08,.23,.3],[1.12,.51,.38],[-.03,.88,.28],[.98,.97,.25]]) {
+      const radius=W*r,g=c.createRadialGradient(W*x-radius*.25,H*y-radius*.3,0,W*x,H*y,radius);
+      g.addColorStop(0,'rgba(255,255,255,.8)');g.addColorStop(.6,'rgba(239,236,255,.4)');g.addColorStop(1,'rgba(230,224,255,0)');
+      c.fillStyle=g;c.beginPath();c.arc(W*x,H*y,radius,0,Math.PI*2);c.fill();
+    }
+    c.fillStyle='rgba(255,255,255,.55)';
+    for(let k=0;k<18;k++){const x=((k*137.51)%W),y=((k*213.7+80)%H);c.beginPath();c.arc(x,y,k%3===0?2:1,0,Math.PI*2);c.fill();}
   }
 
   function tracked(c, text, x, y, spacing) {
@@ -424,15 +430,15 @@
 
   function paintPanel(c, r, label) {
     c.save();
-    c.shadowColor = 'rgba(53,55,55,.12)'; c.shadowBlur = 7; c.shadowOffsetY = 3;
+    c.shadowColor = 'rgba(49,13,108,.4)'; c.shadowBlur = 7; c.shadowOffsetY = 3;
     rr(c, r.x, r.y, r.w, r.h, Math.min(16, r.h * .22));
     const material = c.createLinearGradient(r.x, r.y, r.x+r.w, r.y+r.h);
-    material.addColorStop(0, '#fbf8f1'); material.addColorStop(1, '#e4dfd6');
-    c.fillStyle = material; c.fill(); c.restore();
+    material.addColorStop(0, '#6648c9'); material.addColorStop(1, '#332277');
+    c.fillStyle = material; c.fill(); c.shadowBlur=0; c.strokeStyle='rgba(255,220,255,.65)';c.lineWidth=1.5;c.stroke(); c.restore();
     if (label) {
       const fs = clamp(r.h * .13, 8.5, 11);
       c.font = '700 ' + fs + 'px ' + FU;
-      c.fillStyle = '#626b70'; c.textBaseline = 'alphabetic';
+      c.fillStyle = '#ecdcff'; c.textBaseline = 'alphabetic';
       tracked(c, label, r.x + fs * .9, r.y + fs * 1.5, fs * .14);
     }
   }
@@ -450,17 +456,20 @@
     const s = L.cell;
     const pad = Math.max(5, s * .22);
     c.save();
-    c.shadowColor = 'rgba(40,47,50,.24)'; c.shadowBlur = s*.45; c.shadowOffsetY = s*.18;
+    c.shadowColor = 'rgba(176,31,255,.65)'; c.shadowBlur = s*.45; c.shadowOffsetY = s*.18;
     rr(c,L.bx-pad,L.by-pad,L.bw+pad*2,L.bh+pad*2,s*.4);
     const rim=c.createLinearGradient(L.bx,L.by,L.bx+L.bw,L.by+L.bh);
-    rim.addColorStop(0,'#fffcf5'); rim.addColorStop(.5,'#e9e4da'); rim.addColorStop(1,'#c8c4bd');
-    c.fillStyle=rim; c.fill(); c.restore();
+    rim.addColorStop(0,'#fff3af'); rim.addColorStop(.5,'#ff81e8'); rim.addColorStop(1,'#7b36bb');
+    c.fillStyle=rim; c.fill();
+    c.shadowBlur=0;c.lineWidth=2;c.strokeStyle='rgba(255,249,231,.85)';c.stroke();
+    rr(c,L.bx-pad*.45,L.by-pad*.45,L.bw+pad*.9,L.bh+pad*.9,s*.27);
+    c.lineWidth=Math.max(1,pad*.22);c.strokeStyle='rgba(114,31,148,.55)';c.stroke();c.restore();
     rr(c,L.bx-1,L.by-1,L.bw+2,L.bh+2,s*.2);
-    c.fillStyle='#242f39'; c.fill();
+    c.fillStyle='#58256b'; c.fill();
     const well=c.createLinearGradient(0,L.by,0,L.by+L.bh);
-    well.addColorStop(0,'#303e49'); well.addColorStop(.12,'#3a4a56'); well.addColorStop(1,'#45545f');
+    well.addColorStop(0,'#171d43'); well.addColorStop(.12,'#23234d'); well.addColorStop(1,'#35204f');
     rr(c,L.bx,L.by,L.bw,L.bh,s*.18); c.fillStyle=well; c.fill();
-    c.strokeStyle='rgba(220,231,235,.055)'; c.lineWidth=1/DPR;
+    c.strokeStyle='rgba(191,156,255,.13)'; c.lineWidth=1/DPR;
     for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) {
       rr(c,L.bx+x*s+s*.07,L.by+y*s+s*.07,s*.86,s*.86,s*.17); c.stroke();
     }
@@ -858,7 +867,7 @@
     ctx.lineTo(x - r, y);
     ctx.closePath();
     if (filled) {
-      ctx.fillStyle = '#8b661e';
+      ctx.fillStyle = '#684100';
       ctx.fill();
     } else {
       ctx.strokeStyle = 'rgba(139,102,30,0.45)';
@@ -881,11 +890,11 @@
     const fs = h * 0.5;
     ctx.textBaseline = 'middle';
     ctx.font = '700 ' + fs * 0.85 + 'px ' + FU;
-    ctx.fillStyle = '#606a70';
+    ctx.fillStyle = '#40316b';
     ctx.fillText('LV', x + h * 0.45, y + h * 0.48);
     const lw = ctx.measureText('LV').width;
     ctx.font = '700 ' + fs + 'px ' + FD;
-    ctx.fillStyle = '#34434c';
+    ctx.fillStyle = '#322163';
     ctx.fillText(String(game.level), x + h * 0.45 + lw + 4, y + h * 0.5);
     const bx = x + w * 0.55;
     const bw = w * 0.45 - h * 0.45;
@@ -895,9 +904,9 @@
     const p = game.levelProgress();
     if (p > 0) {
       const g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
-      g.addColorStop(0, '#53a8ad');
-      g.addColorStop(0.5, '#53a8ad');
-      g.addColorStop(1, '#527bb8');
+      g.addColorStop(0, '#ec31ff');
+      g.addColorStop(0.5, '#ec31ff');
+      g.addColorStop(1, '#7435ff');
       rr(ctx, bx, y + h / 2 - 2, Math.max(4, bw * p), 4, 2);
       ctx.fillStyle = g;
       ctx.fill();
@@ -910,7 +919,7 @@
     rr(ctx, x, y, w, h, h / 2);
     ctx.fillStyle = 'rgba(139,102,30,' + (0.07 + fx.tokenPulse * 0.25) + ')';
     ctx.fill();
-    drawSwapIcon(x + h * 0.62, y + h * 0.48, h * 0.6, '#8b661e');
+    drawSwapIcon(x + h * 0.62, y + h * 0.48, h * 0.6, '#684100');
     const pr = h * 0.18;
     const px0 = x + h * 1.3;
     for (let k = 0; k < PF.MAX_TOKENS; k++) {
@@ -927,7 +936,7 @@
     const mp = game.tokens >= PF.MAX_TOKENS ? 1 : game.meter / PF.METER_MAX;
     if (mp > 0) {
       rr(ctx, mx, y + h * 0.74, Math.max(2.5, mw * mp), 2.5, 1.25);
-      ctx.fillStyle = '#8b661e';
+      ctx.fillStyle = '#684100';
       ctx.fill();
     }
   }
@@ -958,10 +967,10 @@
     if (L.portrait) {
       const lf = clamp(I.h * 0.13, 8.5, 11);
       ctx.font = '700 ' + lf + 'px ' + FU;
-      ctx.fillStyle = '#606a70';
+      ctx.fillStyle = '#40316b';
       tracked(ctx, 'SCORE', I.x, I.y + lf * 1.3, lf * 0.14);
       const size = fitFont(scoreText, '700', FD, clamp(I.h * 0.36, 18, 32), I.w - 42);
-      ctx.fillStyle = '#34434c';
+      ctx.fillStyle = '#322163';
       drawScoreText(scoreText, I.x, I.y + lf * 1.5 + size * 1.05);
       const ph = clamp(I.h * 0.28, 17, 24);
       const py = I.y + I.h - ph;
@@ -972,10 +981,10 @@
       const lf = 11;
       let y = I.y;
       ctx.font = '700 ' + lf + 'px ' + FU;
-      ctx.fillStyle = '#606a70';
+      ctx.fillStyle = '#40316b';
       tracked(ctx, 'SCORE', I.x + 2, y + 12, 1.5);
       const size = fitFont(scoreText, '700', FD, 26, I.w);
-      ctx.fillStyle = '#34434c';
+      ctx.fillStyle = '#322163';
       drawScoreText(scoreText, I.x + 2, y + 16 + size);
       y += 24 + size + 14;
       drawLevelPill(I.x, y, I.w, 26);
@@ -983,7 +992,7 @@
       drawSwapPill(I.x, y, I.w, 26);
       y += 40;
       ctx.font = '600 11px ' + FU;
-      ctx.fillStyle = '#606a70';
+      ctx.fillStyle = '#40316b';
       ctx.fillText('Blocks ' + fmt(game.cleared), I.x + 2, y + 6);
     }
   }
@@ -1229,6 +1238,8 @@
         ctx.save();
         ctx.translate(cx, cy);
         if (ang) ctx.rotate(ang);
+        ctx.globalAlpha = alpha * .22;
+        ctx.drawImage(SPR.glow[c.c], -s, -s, s * 2, s * 2);
         ctx.globalAlpha = alpha;
         ctx.drawImage(SPR.blocks[c.c][0], -s / 2, -s / 2, s, s);
         if (lockGlow > 0) {

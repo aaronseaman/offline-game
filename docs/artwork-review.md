@@ -1,6 +1,6 @@
-# Molded-plastic artwork
+# Glossy arcade artwork
 
-The visual target is the rounded, satin-finished, softly lit toy material of the supplied character reference. This pass applies that material to the puzzle pieces, tray, controls, special blocks, icons and launch screens.
+The visual target is the latest bright arcade reference: saturated jewel pieces, strong polished highlights, raised emblems, a luminous board rim and playful depth. Original ribbon, halo, crescent, wing, bloom and flare emblems replace the reference's pieces. Line specials use chevrons, area specials use an orbital sphere, and the prism uses a six-sector spectral core. The existing 7×16 board and action animations are preserved.
 
 ![Phone gameplay with a seeded review board](artwork-play.png)
 
@@ -17,4 +17,4 @@ The gameplay image uses a seeded board to show the ordinary pieces, line blaster
 - Icons and all six iOS launch-screen sizes regenerated with the shared renderer.
 - Single-file artifact build succeeds.
 
-Physical iPhone Safari testing remains outstanding. The reference is a rendered character image; this is an intentionally lightweight Canvas approximation of its materials, not a live 3D renderer.
+Physical iPhone Safari testing remains outstanding. Artwork is cached Canvas rendering; the game remains dependency-free at runtime and works offline.
