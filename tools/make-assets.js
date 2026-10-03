@@ -22,7 +22,7 @@ function block(c, x, y, s, hex, gem) {
 }
 function background(c, S) {
   const g = c.createLinearGradient(0, 0, S, S);
-  g.addColorStop(0, '#f4f0e8'); g.addColorStop(1, '#dad4ca');
+  g.addColorStop(0, '#20a4ff'); g.addColorStop(1, '#b78aff');
   c.fillStyle = g; c.fillRect(0, 0, S, S);
 }
 // Same molded pieces and studio lighting as gameplay.
@@ -49,7 +49,7 @@ window.splash = async (w, h) => {
   const k = 16, sw = Math.ceil(w / k), sh = Math.ceil(h / k);
   const bg = document.createElement('canvas'); bg.width = sw; bg.height = sh;
   const b = bg.getContext('2d');
-  const g = b.createLinearGradient(0, 0, 0, sh); g.addColorStop(0, '#f4f0e8'); g.addColorStop(1, '#dad4ca');
+  const g = b.createLinearGradient(0, 0, 0, sh); g.addColorStop(0, '#20a4ff'); g.addColorStop(1, '#b78aff');
   b.fillStyle = g; b.fillRect(0, 0, sw, sh);
   const rg = b.createRadialGradient(sw / 2, sh * 0.42, 0, sw / 2, sh * 0.42, sw * 0.8);
   rg.addColorStop(0, 'rgba(255,253,247,0.22)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
@@ -60,19 +60,19 @@ window.splash = async (w, h) => {
   mark(c, w / 2, h * 0.42, s);
   c.textAlign = 'center'; c.textBaseline = 'alphabetic';
   c.font = '900 ' + Math.round(w * 0.105) + 'px Unbounded';
-  c.fillStyle = '#34434c';
+  c.fillStyle = '#ffffff';
   c.fillText('PRISMFALL', w / 2, h * 0.42 + s * 3.0);
   return cv.toDataURL('image/png');
 };
 </script></body></html>`;
 
 const FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#f4f0e8"/><stop offset="1" stop-color="#dad4ca"/></linearGradient></defs>
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#20a4ff"/><stop offset="1" stop-color="#b78aff"/></linearGradient></defs>
 <rect width="64" height="64" rx="14" fill="url(#bg)"/>
-<rect x="8" y="30" width="16" height="17" rx="4" fill="#cf6b61"/>
-<rect x="24" y="30" width="16" height="17" rx="4" fill="#dbb354"/>
-<rect x="40" y="30" width="16" height="17" rx="4" fill="#53a8ad"/>
-<rect x="24" y="14" width="16" height="17" rx="4" fill="#99749f"/>
+<rect x="8" y="30" width="16" height="17" rx="4" fill="#ff239d"/>
+<rect x="24" y="30" width="16" height="17" rx="4" fill="#ffc817"/>
+<rect x="40" y="30" width="16" height="17" rx="4" fill="#08cfee"/>
+<rect x="24" y="14" width="16" height="17" rx="4" fill="#b232ff"/>
 <path d="M28 19h8l2 3-6 6-6-6z" fill="#f9f4ed"/>
 </svg>`;
 
