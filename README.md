@@ -4,6 +4,38 @@ A falling-shape puzzle where colors matter, not rows. The seven classic four-cel
 
 Prismfall is an installable, offline-first web app (PWA) tuned for iPhone 17 Pro Max (440×956 pt, 3×, Dynamic Island and home indicator safe areas). It also adapts to other phones, tablets and desktop browsers.
 
+## Native iOS app
+
+`ios/Prismfall.xcodeproj` is the same game as a native iPhone app: SpriteKit for the board, SwiftUI for the menus, built with the iOS 27 SDK and running on iOS 26 or later. It has no dependencies and ships no image or audio files except the icon, the launch logo and the display font; block artwork is drawn with Core Graphics and sound effects are synthesized at launch.
+
+Open the project in Xcode, choose your iPhone and press Run. Signing is set to automatic, so Xcode needs your Apple ID under Settings → Accounts the first time.
+
+It differs from the web version in three ways:
+
+- **Quicker levels.** A level takes 36 cleared blocks instead of 45, so speed, colour mix and the swap window all tighten about a quarter sooner. Level 1 is unchanged.
+- **Calm mode.** Chosen on the menu. The pace stays at one row per second, the palette stays at five colours, swaps are never timed, and it keeps its own top ten.
+- **Portrait only**, with touch, hardware-keyboard and haptic input.
+
+```
+ios/Prismfall/Engine.swift        rules: shapes, SRS rotation, matching, gravity, cascades, swaps, specials, scoring
+ios/Prismfall/GameScene.swift     layout, board and HUD rendering, effects, touch and keyboard input
+ios/Prismfall/Art.swift           palette and procedural artwork
+ios/Prismfall/Audio.swift         synthesized sound effects and haptics
+ios/Prismfall/Menus.swift         menu, pause, game over, settings, guide and scores
+ios/Prismfall/PrismfallApp.swift  app state, saved game, scores
+ios/PrismfallTests                engine tests
+```
+
+Run the engine tests with:
+
+```sh
+xcodebuild test -project ios/Prismfall.xcodeproj -scheme Prismfall -destination 'platform=iOS Simulator,name=iPhone 18 Pro Max'
+```
+
+If you change the launch screen assets, delete the app from the device (and restart a simulator) before judging the result: iOS keeps the old launch screen cached.
+
+The rest of this file describes the web version.
+
 ## Install on iPhone
 
 1. Open the game's URL in **Safari**.
